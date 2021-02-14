@@ -41,20 +41,16 @@ class FrameNotCreatedError(Exception):
 def generate_frame(in_filename, out_filename, time_frame, width, height):
     """ Takes input video with screen resolution and return a frame from the specified timestamp
     """
-    (out,err) = (
+    (
         ffmpeg
         .input(in_filename, ss=time_frame)
         .filter('scale', width, height, force_original_aspect_ratio=1)
         .filter('pad', width, height, -1, -1)
-        .output(out_filename, vframes=1)
-        # .overwrite_output()
+        .output(out_filename, vframes=1)              
+        .overwrite_output()
         .run(capture_stdout=True, capture_stderr=True)
-        # .run(capture_stderr=True)
-        # .run(quiet=True)
     )
-    # if str(err).find("Output file is empty, nothing was encoded"):
-    #     raise FrameNotCreatedError()
-
+    
 def check_convert_video(value):
     """Check the video and return an error if its not an MKV or MP4
         if it is a MKV it convert the file to mp4
