@@ -23,8 +23,8 @@ from PIL import Image
 ## Defining screen Constants
 WIDTH = 880
 HEIGHT = 528
-# # Screen driver, Ensure this matches your particular screen
-# epd = epd7in5_HD.EPD()
+# Screen driver, Ensure this matches your particular screen
+epd = epd7in5_HD.EPD()
 
 class FrameNotCreatedError(Exception):
     """Exception raised for errors due to ffmpeg trying to create a frame
@@ -196,8 +196,8 @@ def main():
     print("The current video is %s" %current_video)
 
     # Initialise and clear the screen
-    # epd.init()
-    # epd.Clear()
+    epd.init()
+    epd.Clear()
 
     current_position = 0
 
@@ -286,14 +286,14 @@ def main():
             time.sleep(0)
         else:
             time.sleep(frame_delay-processtime)
-        # epd.init()
+        epd.init()
 
 
 
 
-    # epd.sleep()
+    epd.sleep()
 
-    # epd7in5.epdconfig.module_exit()
+    epd7in5_HD.epdconfig.module_exit()
     exit()
 
 if __name__=="__main__":
