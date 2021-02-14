@@ -254,7 +254,7 @@ def main():
             pil_im.save('dither_tmp.jpg',"PNG")
 
             # display the image
-            # epd.display(epd.getbuffer(pil_im))
+            epd.display(epd.getbuffer(pil_im))
             print('Diplaying frame %d of %s' %(frame,current_video))
         except FrameNotCreatedError :
             #Reset frame count with the value from the exception
