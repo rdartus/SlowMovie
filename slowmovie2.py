@@ -19,6 +19,7 @@ import math
 import argparse
 import ffmpeg
 from PIL import Image
+from waveshare_epd import epd7in5_HD
 
 ## Defining screen Constants
 WIDTH = 880
