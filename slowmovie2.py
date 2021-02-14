@@ -104,11 +104,14 @@ def get_frame_number(video_path) :
         frame_count = int(ffmpeg.probe(video_path)['streams'][0]['nb_frames'])
         return frame_count
     elif str.endswith(video_path,".mkv"):
-        duration = math.trunc(float(ffmpeg.probe(video_path)['format']['duration']))
-        frame_rate= ffmpeg.probe(video_path)['streams'][0]['r_frame_rate'].split("/")
-        frame_rate = float(int(frame_rate[0])/int(frame_rate[1]))
-        frame_count = int(duration*frame_rate)
-        return frame_count
+        probe = ffmpeg.probe(video_path)
+        for stream in  probe['streams']:
+            if str(stream["codec_type"]) == "video" :
+                duration = math.trunc(float(probe['format']['duration']))
+                frame_rate= stream['r_frame_rate'].split("/")
+                frame_rate = float(int(frame_rate[0])/int(frame_rate[1]))
+                frame_count = int(duration*frame_rate)
+                return frame_count
     else:
         raise Exception
 
