@@ -1,0 +1,12 @@
+[Unit]
+Description=Slow Movie Player Service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/SlowMovie
+ExecStart=/usr/bin/python3 /home/pi/SlowMovie/slowmovie.py
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
