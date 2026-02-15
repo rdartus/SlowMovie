@@ -12,10 +12,22 @@ RESET="\e[0m"
 # file paths
 SERVICE_DIR=/etc/systemd/system
 SERVICE_FILE=slowmovie.service
+SERVICE_FILE_TEMPLATE=slowmovie.service.template
 
 function install_linux_packages(){
   sudo apt-get update
-  sudo apt-get install -y ffmpeg git python3-pip libatlas-base-dev
+  sudo apt-get install -y ffmpeg git python3-pip python3-venv libatlas-base-dev
+}
+
+function create_python_venv(){
+  python3 -m venv --system-site-packages $LOCAL_DIR/.SlowMovie # numpty requires system-site-packages
+  source $LOCAL_DIR/.SlowMovie/bin/activate #activate our venv
+  # add venv to .profile so it is sourced for the users login shell
+  if ! grep -q "source $LOCAL_DIR/.SlowMovie/bin/activate" "$HOME/.profile" ; then
+    echo >> "$HOME/.profile"
+    echo "# activate the SlowMovie python venv" >> "$HOME/.profile"
+    echo "source $LOCAL_DIR/.SlowMovie/bin/activate" >> "$HOME/.profile" 
+  fi
 }
 
 function install_python_packages(){
@@ -45,6 +57,11 @@ function service_installed(){
   fi
 }
 
+function copy_service_file(){
+  sudo mv $SERVICE_FILE $SERVICE_DIR
+  sudo systemctl daemon-reload
+}
+
 function install_slowmovie(){
   FIRST_TIME=1  # if this is a first time install
 
@@ -66,7 +83,7 @@ function install_slowmovie(){
     git pull
 
     # go back to home directory
-    cd /home/pi/
+    cd $HOME
   else
     echo -e "No Install Found - Cloning Repo"
     git clone -b ${GIT_BRANCH} ${GIT_REPO} ${LOCAL_DIR}
@@ -79,22 +96,21 @@ function install_slowmovie(){
   fi
 
   if [ "$SKIP_DEPS" = false ]; then
+    # create the python venv
+    create_python_venv
     # install any needed python packages
     install_python_packages
-
   fi
 
   cd $LOCAL_DIR
 
-  # check if the service file needs to be updated
-  if (service_installed) && ! (cmp -s "slowmovie.service" "/etc/systemd/system/slowmovie.service"); then
-    sudo cp $SERVICE_FILE $SERVICE_DIR
-    sudo systemctl daemon-reload
-
-    echo -e "Updating SlowMovie service file"
+  # if the service is installed check if it needs an update
+  if (service_installed); then
+    install_service
   fi
 
-  echo -e "SlowMovie install/update complete. To test, run '${YELLOW}python3 ${LOCAL_DIR}/slowmovie.py${RESET}'"
+  # the venv will not be active in the current users shell until they log out/in  
+  echo -e "SlowMovie install/update complete. To test, run '${YELLOW}source $LOCAL_DIR/.SlowMovie/bin/activate; python3 ${LOCAL_DIR}/slowmovie.py${RESET}'"
 
   return $FIRST_TIME
 }
@@ -103,22 +119,32 @@ function install_service(){
   if [ -d "${LOCAL_DIR}" ]; then
     cd $LOCAL_DIR
 
+    # generate the service file
+    envsubst <$SERVICE_FILE_TEMPLATE > $SERVICE_FILE
+
     if ! (service_installed); then
       # install the service files and enable
-      sudo cp $SERVICE_FILE $SERVICE_DIR
-      sudo systemctl daemon-reload
+      copy_service_file
       sudo systemctl enable slowmovie
 
       echo -e "SlowMovie service installed! Use ${YELLOW}sudo systemctl start slowmovie${RESET} to test"
     else
-      echo -e "${RED}SlowMovie service is already installed.${RESET}"
+      echo -e "${YELLOW}SlowMovie service is installed, checking if it needs an update${RESET}"
+      if ! (cmp -s "slowmovie.service" "/etc/systemd/system/slowmovie.service"); then
+        copy_service_file
+        echo -e "Updating SlowMovie service file"
+      else
+        # remove the generated service file
+        echo -e "No update needed"
+        rm $SERVICE_FILE
+      fi
     fi
   else
     echo -e "${RED}SlowMovie repo does not exist! Use option 1 - Install/Upgrade SlowMovie first${RESET}"
   fi
 
   # go back to home
-  cd /home/pi
+  cd $HOME
 }
 
 function uninstall_service(){
@@ -160,9 +186,9 @@ while getopts ":r:b:si:h" arg; do
 done
 
 # set the local directory
-LOCAL_DIR="/home/pi/$(basename $GIT_REPO)"
+LOCAL_DIR="$HOME/$(basename $GIT_REPO)"
 
-cd /home/pi/
+cd $HOME
 
 # check if service is currently running and stop if it is
 RESTART_SERVICE="FALSE"
@@ -196,8 +222,11 @@ if [ $INSTALL_OPTION -eq 1 ]; then
   # prompt for service install if the first time being run (whiptail 1=No)
   INSTALL_SERVICE=1
   if [ ! -d "${LOCAL_DIR}" ]; then
-    whiptail --yesno "Would you like to install the SlowMovie Service to\nstart playback automatically?" 0 0
-    INSTALL_SERVICE=$?
+    if whiptail --yesno "Would you like to install the SlowMovie Service to\nstart playback automatically?" 0 0; then
+      INSTALL_SERVICE=0
+    else
+      INSTALL_SERVICE=1
+    fi
   fi
 
 	# install or update

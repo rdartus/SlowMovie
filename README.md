@@ -6,6 +6,19 @@
 
 Very Slow Movie Player using Python + Raspberry Pi
 
+## Table Of Contents
+
+- [Background](#background)
+- [Install](#install)
+  - [Automated Installation](#automated-installation)
+  - [Manual Installation](#manual-installation)
+- [Usage](#usage)
+  - [E-ink Display Customization](#e-ink-display-customization)
+  - [Running as a Service](#running-as-a-service)
+- [Maintainers](#maintainers)
+- [Contributors](#contributors)
+- [License](#license)
+
 ## Background
 
 In December 2018, Bryan Boyer posted [“Creating a Very Slow Movie Player”](https://medium.com/s/story/very-slow-movie-player-499f76c48b62), an essay about light and Brasília and architecture in which Boyer builds an e-paper display that shows films at 24 frames per hour, rather than 24 frames per second so it takes about a year to play the 142 minutes of _2001: A Space Odyssey_.
@@ -49,14 +62,15 @@ On the Raspberry Pi:
 1. Set up environment
    * Update package sources: `sudo apt update`
    * Make sure git is installed: `sudo apt install git`
-   * Make sure pip is installed: `sudo apt install python3-pip`
-2. Install Waveshare e-paper drivers
-   * `pip3 install "git+https://github.com/waveshare/e-Paper.git#subdirectory=RaspberryPi_JetsonNano/python&egg=waveshare-epd"`
+   * Make sure pip is installed: `sudo apt install python3-pip python3-venv`
+2. Create & activate python virtual environment (venv)
+   * Create virtual environment: `python3 -m venv --system-site-packages .SlowMovie`
+   * Activate virtual environment: `source .SlowMovie/bin/activate`
 3. Clone this repo
    * `git clone https://github.com/TomWhitwell/SlowMovie`
    * Navigate to the new SlowMovie directory: `cd SlowMovie/`
    * Copy the default configuration file: `cp Install/slowmovie-default.conf slowmovie.conf`
-4. Make sure dependencies are installed
+4. Make sure dependencies are installed - this will install the EPD drivers
    * `sudo apt install ffmpeg`
    * `pip3 install ffmpeg-python`
    * `pip3 install pillow`
@@ -76,8 +90,8 @@ The following options are available:
 ```
 usage: slowmovie.py [-h] [-f FILE] [-D DIRECTORY] [-l] [-R]
                     [-o {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-r] [-d DELAY]
-                    [-i INCREMENT] [-s START] [-S | -t] [-e EPD] [-c CONTRAST]
-                    [-C]
+                    [-i INCREMENT] [-s START] [-F] [-S | -t] [-e EPD]
+                    [-c CONTRAST] [-C]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -104,6 +118,7 @@ Frame Update Args:
                         advance INCREMENT frames each refresh (default: 4)
   -s START, --start START
                         start playing at a specific frame
+  -F, --fullscreen      expand image to fill display
   -S, --subtitles       display SRT subtitles
   -t, --timecode        display video timecode
 
@@ -145,7 +160,8 @@ sharpness=1  # adjust image sharpness, 1 = no adjustment
 SlowMovie can run as a service. To set this up you can either use option 2 from the install script ( [see above](https://github.com/TomWhitwell/SlowMovie#automated-installation) ) or from the SlowMovie directory run the following:
 
 ```
-sudo cp slowmovie.service /etc/systemd/system
+envsubst <slowmovie.service.template > slowmovie.service
+sudo mv slowmovie.service /etc/systemd/system
 sudo systemctl daemon-reload
 ```
 
@@ -160,7 +176,7 @@ Now you can use the `systemctl` command to start and stop the program, and enabl
 | `sudo systemctl enable slowmovie`          | Enable the service auto-starting on boot    |
 | `sudo systemctl disable slowmovie`         | Disable the service auto-starting on boot   |
 | `systemctl status slowmovie`               | Display the status of the SlowMovie service |
-| `tail -f /home/pi/SlowMovie/slowmovie.log` | Show the logs for the SlowMovie service     |
+| `tail -f ~/SlowMovie/slowmovie.log`    | Show the logs for the SlowMovie service     |
 
 So, if you want SlowMovie to start automatically when the device is powered on, run:
 
@@ -168,7 +184,7 @@ So, if you want SlowMovie to start automatically when the device is powered on, 
 sudo systemctl enable slowmovie
 ```
 
-And if something goes wrong, the first step is to check the logs for an error message. The command above will show the last few lines of the log file but you can view the entire file located at `/home/pi/SlowMovie/slowmovie.log` with any text editor.
+And if something goes wrong, the first step is to check the logs for an error message. The command above will show the last few lines of the log file but you can view the entire file located at `~/SlowMovie/slowmovie.log` with any text editor.
 
 ## Maintainers
 
@@ -189,6 +205,7 @@ Please read our [contributing guidelines](/.github/CONTRIBUTING.md) before submi
 * [@missionfloyd](https://github.com/missionfloyd)
 * [@robweber](https://github.com/robweber)
 * [@qubist](https://github.com/qubist)
+* [@JonCellini](https://github.com/JonCellini)
 
 ## License
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
 # *************************
@@ -59,6 +59,7 @@ def generate_frame(in_filename, out_filename, time):
         ffmpeg
         .input(in_filename, ss=time)
         .filter("scale", "iw*sar", "ih")
+        .fullscreen_filter()
         .filter("scale", width, height, force_original_aspect_ratio=1)
         .filter("pad", width, height, -1, -1)
         .overlay_filter()
@@ -76,7 +77,17 @@ def overlay_filter(self):
     return self
 
 
+def fullscreen_filter(self):
+    if args.fullscreen:
+        if videoInfo["aspect_ratio"] > width / height:
+            return self.filter("crop", f"ih*{width / height}", "ih")
+        elif videoInfo["aspect_ratio"] < width / height:
+            return self.filter("crop", "iw", f"iw*{height / width}")
+    return self
+
+
 ffmpeg.Stream.overlay_filter = overlay_filter
+ffmpeg.Stream.fullscreen_filter = fullscreen_filter
 
 
 # Used by configargparse to check that a file exists and is a compatible video
@@ -127,13 +138,15 @@ def video_info(file):
         frameTime = 1000 / fps
 
         subtitle_file = find_subtitles(file)
+        aspect_ratio = int(stream["width"]) / int(stream["height"])
 
         info = {
             "frame_count": frameCount,
             "fps": fps,
             "duration": duration,
             "frame_time": frameTime,
-            "subtitle_file": subtitle_file}
+            "subtitle_file": subtitle_file,
+            "aspect_ratio": aspect_ratio}
 
         videoInfos[file] = info
     return info
@@ -230,6 +243,7 @@ argsControl.add_argument("-r", "--random-frames", action="store_true", help="cho
 argsControl.add_argument("-d", "--delay", default=120, type=int, help="delay in seconds between screen updates (default: %(default)s)")
 argsControl.add_argument("-i", "--increment", default=4, type=int, help="advance INCREMENT frames each refresh (default: %(default)s)")
 argsControl.add_argument("-s", "--start", type=int, help="start playing at a specific frame")
+argsControl.add_argument("-F", "--fullscreen", action="store_true", help="expand image to fill display")
 textOverlayGroup = argsControl.add_mutually_exclusive_group()
 textOverlayGroup.add_argument("-S", "--subtitles", action="store_true", help="display SRT subtitles")
 textOverlayGroup.add_argument("-t", "--timecode", action="store_true", help="display video timecode")
@@ -274,18 +288,6 @@ if not os.path.isdir(progressdir):
     os.mkdir(progressdir)
 if not os.path.isdir(viddir):
     os.mkdir(viddir)
-
-# Move leftover progress files
-if os.path.isdir("logs"):
-    for f in os.listdir("logs"):
-        _, ext = os.path.splitext(f)
-        if ext == ".progress":
-            os.rename(os.path.join("logs", f), os.path.join(progressdir, f))
-    # Remove old logs dir if empty
-    try:
-        os.rmdir("logs")
-    except OSError:
-        pass
 
 # Pick which video to play
 logger.debug("Picking which video to play...")
